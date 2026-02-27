@@ -34,8 +34,8 @@ struct gameInfo {
     std::array<botent, 32> entityList{};
 };
 
-inline dynamicInfo di{};
-inline gameInfo gi{};
+inline dynamicInfo di;
+inline gameInfo gi;
 void acMemoryReading();
 
 #endif

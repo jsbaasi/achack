@@ -77,12 +77,19 @@ int main(int, char**)
     ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
 
     // Our state
-    bool show_demo_window = true;
+    bool show_demo_window = false;
     bool show_another_window = true;
     ImVec4 clear_color = ImVec4(0.f, 0.f, 0.f, 1.00f);
 
-    initDynamicInfo(L"AssaultCube", di);
+    if (int ec = initDynamicInfo("ac_client.exe", di); ec) {
+        MessageBoxA(NULL, ec==1 ? "Failed to get pid" : "Failed to get base address" , "Error", MB_ICONERROR);
+        return 1;
+    }
     initGameInfo(di, gi);
+    if (gi.entityCount == 0) {
+        MessageBoxA(NULL, "Entity count is 0", "Error", MB_ICONERROR);
+        return 1;
+    }
 
     std::thread memReadThread{ acMemoryReading };
     memReadThread.detach();
@@ -137,8 +144,13 @@ int main(int, char**)
         // 2. Show another simple window.
         if (show_another_window)
         {
-            ImGui::Begin("Details");
-            ImGui::Text("Hello from another window!");
+            ImGui::Begin("Details", 0, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBackground);
+            ImGui::Text("%d", gi.entityCount);
+            for (DWORD i{1}; i < gi.entityCount; i++) {
+                botent& ent = gi.entityList[i];
+                ImGui::Text("Name=%s | Health=%d | x=%.2f,y=%.2f,z=%.2f", ent.name, ent.health, ent.x, ent.y, ent.z);
+            }
+            
             ImGui::End();
         }
 

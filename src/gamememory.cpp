@@ -5,14 +5,14 @@
 #include "pointer.h"
 #include <array>
 
-bool initDynamicInfo(const wchar_t* pName, dynamicInfo& di) {
+bool initDynamicInfo(const char* pName, dynamicInfo& di) {
     DWORD pID = 0;
     HANDLE hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     PROCESSENTRY32 pInfo{ sizeof(PROCESSENTRY32) };
 
     if (Process32First(hProcessSnap, &pInfo)) {
         do {
-            if (wcscmp(pName, (wchar_t*)pInfo.szExeFile) == 0) {
+            if (strcmp(pName, pInfo.szExeFile) == 0) {
                 pID = pInfo.th32ProcessID;
                 break;
             }
