@@ -5,6 +5,7 @@
 
 void acMemoryReading() {
 	while (true) {
+		RPM<playerent>(gi.playerAddr, gi.playerEnt);
 		for (DWORD i{ 1 }; i < gi.entityCount; i++) {
 			 RPM<botent>(gi.entityAddrList[i], gi.entityList[i]);
 		}

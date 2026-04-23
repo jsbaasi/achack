@@ -8,18 +8,18 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(IMGUI_SRCS
-	"external/imgui.cpp"
-	"external/imgui_demo.cpp"
-	"external/imgui_draw.cpp"
-	"external/imgui_impl_dx11.cpp"
-	"external/imgui_impl_win32.cpp"
-	"external/imgui_tables.cpp"
-	"external/imgui_widgets.cpp"
+	"external/imgui/imgui.cpp"
+	"external/imgui/imgui_demo.cpp"
+	"external/imgui/imgui_draw.cpp"
+	"external/imgui/imgui_impl_dx11.cpp"
+	"external/imgui/imgui_impl_win32.cpp"
+	"external/imgui/imgui_tables.cpp"
+	"external/imgui/imgui_widgets.cpp"
 	#debugging stuff
-	"external/imgui.natvis"
-    "external/imgui.natstepfilter"
+	"external/imgui/imgui.natvis"
+    "external/imgui/imgui.natstepfilter"
 	#std::string
-	"external/imgui_stdlib.cpp"
+	"external/imgui/imgui_stdlib.cpp"
 )
 
 project(achack)
@@ -34,10 +34,11 @@ add_executable(${PROJECT_NAME}
 
 target_precompile_headers(${PROJECT_NAME} PRIVATE
     <windows.h>
-    "external/imgui.h"
-    "external/imconfig.h"
-    "external/imgui_impl_dx11.h"
-    "external/imgui_impl_win32.h"
+    "external/imgui/imgui.h"
+    "external/imgui/imconfig.h"
+    "external/imgui/imgui_impl_dx11.h"
+    "external/imgui/imgui_impl_win32.h"
+    "external/glm/glm.hpp"
 )
 
 target_sources(${PROJECT_NAME} PRIVATE ${IMGUI_SRCS})
@@ -45,6 +46,11 @@ target_sources(${PROJECT_NAME} PRIVATE ${IMGUI_SRCS})
 target_include_directories(${PROJECT_NAME} PRIVATE
 	"include/"
 	"external/"
+	"external/imgui"
+)
+
+target_link_directories(${PROJECT_NAME} PRIVATE
+	"lib/"
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE 

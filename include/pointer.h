@@ -16,6 +16,8 @@ public:
 	}
 	operator DWORD() const;
 	pointer& level(DWORD offset = 0);
+	pointer& add(DWORD offset = 0);
+	pointer& deref();
 private:
 	DWORD addr{};
 };

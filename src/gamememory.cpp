@@ -44,8 +44,9 @@ bool initDynamicInfo(const char* pName, dynamicInfo& di) {
 }
 
 void initGameInfo(dynamicInfo& di, gameInfo& gi) {
-    auto entityListAddr = pointer(di.baseAddr).level(0x18AC04);
-    auto entityCountAddr = pointer(di.baseAddr + 0x18AC0C);
-    RPM<DWORD>(entityCountAddr, gi.entityCount);
+    gi.playerAddr = pointer(di.baseAddr).add(0x18AC00).deref();
+    auto entityListAddr = pointer(di.baseAddr).add(0x18AC04).deref();
+    auto entityCountAddr = pointer(di.baseAddr).add(0x18AC0C);
     RPM<std::array<DWORD, 32>>(entityListAddr, gi.entityAddrList);
+    RPM<DWORD>(entityCountAddr, gi.entityCount);
 }

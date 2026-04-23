@@ -7,6 +7,8 @@
 #include "common.h"
 #include "gamememory.h"
 #include <thread>
+#include <Windows.h>
+#include <glm/vec3.hpp>
 
 // Data
 static ID3D11Device* g_pd3dDevice = nullptr;
@@ -81,6 +83,9 @@ int main(int, char**)
     bool show_another_window = true;
     ImVec4 clear_color = ImVec4(0.f, 0.f, 0.f, 1.00f);
 
+    // =================================
+    // setup game stuff
+
     if (int ec = initDynamicInfo("ac_client.exe", di); ec) {
         MessageBoxA(NULL, ec==1 ? "Failed to get pid" : "Failed to get base address" , "Error", MB_ICONERROR);
         return 1;
@@ -90,6 +95,8 @@ int main(int, char**)
         MessageBoxA(NULL, "Entity count is 0", "Error", MB_ICONERROR);
         return 1;
     }
+
+    // =================================
 
     std::thread memReadThread{ acMemoryReading };
     memReadThread.detach();
@@ -146,10 +153,15 @@ int main(int, char**)
         {
             ImGui::Begin("Details", 0, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBackground);
             ImGui::Text("%d", gi.entityCount);
+            ImGui::Text("Name=%s | Health=%d | x=%.2f,y=%.2f,z=%.2f", gi.playerEnt.name, gi.playerEnt.health, gi.playerEnt.x, gi.playerEnt.y, gi.playerEnt.z);
+            ImGui::Text("vector x=%.2f y=%.2f z=%.2f", gi.entityList[1].x- gi.playerEnt.x, gi.entityList[1].y - gi.playerEnt.y, gi.entityList[1].z - gi.playerEnt.z);
+            //auto linetofirst = glm::vec3(gi.entityList[1].x, gi.entityList[1].y, gi.entityList[1].z) - glm::vec3(gi.playerEnt.x, gi.playerEnt.y, gi.playerEnt.z);
             for (DWORD i{1}; i < gi.entityCount; i++) {
                 botent& ent = gi.entityList[i];
                 ImGui::Text("Name=%s | Health=%d | x=%.2f,y=%.2f,z=%.2f", ent.name, ent.health, ent.x, ent.y, ent.z);
             }
+
+            
             
             ImGui::End();
         }
