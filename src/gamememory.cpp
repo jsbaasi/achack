@@ -5,9 +5,9 @@
 #include "pointer.h"
 #include <array>
 
-bool initDynamicInfo(const char* pName, dynamicInfo& di) {
+bool init_dynamic_info(const char* pName, dynamic_addresses& di) {
     DWORD pID = 0;
-    HANDLE hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    const HANDLE hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     PROCESSENTRY32 pInfo{ sizeof(PROCESSENTRY32) };
 
     if (Process32First(hProcessSnap, &pInfo)) {
@@ -28,10 +28,10 @@ bool initDynamicInfo(const char* pName, dynamicInfo& di) {
     DWORD baseAddr = 0;
 
     if (Module32First(hModuleSnap, &me32)) {
-        baseAddr = (DWORD)me32.modBaseAddr;
+        baseAddr = (DWORD)(DWORD_PTR)me32.modBaseAddr;
     }
 
-    di.baseAddr = baseAddr;
+    di.base_addr = baseAddr;
     di.processId = pID;
 
     CloseHandle(hModuleSnap);
@@ -43,10 +43,12 @@ bool initDynamicInfo(const char* pName, dynamicInfo& di) {
     return 0; // Success
 }
 
-void initGameInfo(dynamicInfo& di, gameInfo& gi) {
-    gi.playerAddr = pointer(di.baseAddr).add(0x18AC00).deref();
-    auto entityListAddr = pointer(di.baseAddr).add(0x18AC04).deref();
-    auto entityCountAddr = pointer(di.baseAddr).add(0x18AC0C);
-    RPM<std::array<DWORD, 32>>(entityListAddr, gi.entityAddrList);
-    RPM<DWORD>(entityCountAddr, gi.entityCount);
+void init_game_info() {
+    _da._player_addr = pointer(_da.base_addr).add(0x18AC00).deref();
+    _da._camera_addr = pointer(_da.base_addr).add(0x192060);
+    _da._projection_mat_addr = pointer(_da.base_addr).add(0x17E0B0);
+    const auto entity_list_addr = pointer(_da.base_addr).add(0x18AC04).deref();
+    const auto entity_count_addr = pointer(_da.base_addr).add(0x18AC0C);
+    RPM<std::array<DWORD, 32>>(entity_list_addr, _da._entity_addr_list);
+    RPM<DWORD>(entity_count_addr, _gd._entity_count);
 }

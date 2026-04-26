@@ -5,7 +5,7 @@
 #include "common.h"
 
 template <typename T> void RPM(DWORD addr, T& out) {
-	ReadProcessMemory(di.gameHandle, reinterpret_cast<LPCVOID>(addr), reinterpret_cast<LPVOID>(&out), sizeof(T), NULL);
+	ReadProcessMemory(_da.gameHandle, reinterpret_cast<LPCVOID>(addr), reinterpret_cast<LPVOID>(&out), sizeof(T), NULL);
 }
 
 class pointer {

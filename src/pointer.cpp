@@ -12,12 +12,12 @@ pointer& pointer::level(DWORD offset) { // offsets first, and then follows the r
 	return *this;
 }
 
-pointer& pointer::add(DWORD offset) { // offsets first, and then follows the resulting address, updates addr variable
+pointer& pointer::add(DWORD offset) { // offsets
 	addr += offset;
 	return *this;
 }
 
-pointer& pointer::deref() {
+pointer& pointer::deref() { // dereferences
 	RPM<DWORD>(addr, addr);
 	return *this;
 }

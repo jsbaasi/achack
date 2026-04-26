@@ -3,7 +3,7 @@
 
 #include <common.h>
 
-bool initDynamicInfo(const char* pName, dynamicInfo& di);
-void initGameInfo(dynamicInfo& di, gameInfo& gi);
+bool init_dynamic_info(const char* pName, dynamic_addresses& di);
+void init_game_info();
 
 #endif

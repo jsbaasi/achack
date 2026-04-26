@@ -25,6 +25,16 @@ void CreateRenderTarget();
 void CleanupRenderTarget();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+void DebugMatrix(const char* label, const glm::mat4& m) {
+    ImGui::Text("%s:", label);
+    // GLM is column-major; print as math rows (transposed display)
+    for (int row = 0; row < 4; ++row) {
+        ImGui::Text("[ %8.3f  %8.3f  %8.3f  %8.3f ]",
+            m[0][row], m[1][row], m[2][row], m[3][row]);
+    }
+    ImGui::Spacing();
+}
+
 // Main code
 int main(int, char**)
 {
@@ -81,32 +91,36 @@ int main(int, char**)
     // Our state
     bool show_demo_window = false;
     bool show_another_window = true;
-    ImVec4 clear_color = ImVec4(0.f, 0.f, 0.f, 1.00f);
+    ImVec4 clear_color = ImVec4(0.f, 0.f, 0.f, 0.f);
 
     // =================================
     // setup game stuff
 
-    if (int ec = initDynamicInfo("ac_client.exe", di); ec) {
+    if (int ec = init_dynamic_info("ac_client.exe", _da); ec) {
         MessageBoxA(NULL, ec==1 ? "Failed to get pid" : "Failed to get base address" , "Error", MB_ICONERROR);
         return 1;
     }
-    initGameInfo(di, gi);
-    if (gi.entityCount == 0) {
+    init_game_info();
+    if (_gd._entity_count == 0) {
         MessageBoxA(NULL, "Entity count is 0", "Error", MB_ICONERROR);
         return 1;
     }
 
     // =================================
 
-    std::thread memReadThread{ acMemoryReading };
-    memReadThread.detach();
+    std::thread mem_read_thread{ memory_read };
+    std::thread esp_draw_thread{ esp_data };
+    mem_read_thread.detach();
+    esp_draw_thread.detach();
+
+    auto game_hwnd = FindWindowA("SDL_app", "AssaultCube");
 
     // Main loop
     bool done = false;
     while (!done)
     {
         WINDOWINFO info{};
-        BOOL res = GetWindowInfo(FindWindowA("SDL_app", "AssaultCube"), &info);
+        BOOL res = GetWindowInfo(game_hwnd, &info);
         MoveWindow(hwnd, info.rcClient.left, info.rcClient.top, info.rcClient.right - info.rcClient.left, info.rcClient.bottom - info.rcClient.top, true);
 
         // Poll and handle messages (inputs, window resize, etc.)
@@ -139,6 +153,8 @@ int main(int, char**)
             CreateRenderTarget();
         }
 
+        _gd._window_size = ImGui::GetMainViewport()->Size;
+
         // Start the Dear ImGui frame
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
@@ -152,17 +168,20 @@ int main(int, char**)
         if (show_another_window)
         {
             ImGui::Begin("Details", 0, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBackground);
-            ImGui::Text("%d", gi.entityCount);
-            ImGui::Text("Name=%s | Health=%d | x=%.2f,y=%.2f,z=%.2f", gi.playerEnt.name, gi.playerEnt.health, gi.playerEnt.x, gi.playerEnt.y, gi.playerEnt.z);
-            ImGui::Text("vector x=%.2f y=%.2f z=%.2f", gi.entityList[1].x- gi.playerEnt.x, gi.entityList[1].y - gi.playerEnt.y, gi.entityList[1].z - gi.playerEnt.z);
+            ImGui::Text("%lu", _gd._entity_count);
+            ImGui::Text("Name=%s | Health=%d | x=%.2f,y=%.2f,z=%.2f", _gd._player_ent.name, _gd._player_ent.health, _gd._player_ent.player_x, _gd._player_ent.player_y, _gd._player_ent.player_z);
+            ImGui::Text("vector x=%.2f y=%.2f z=%.2f", _gd._entity_list[1].x- _gd._player_ent.player_x, _gd._entity_list[1].y - _gd._player_ent.player_y, _gd._entity_list[1].z - _gd._player_ent.player_z);
             //auto linetofirst = glm::vec3(gi.entityList[1].x, gi.entityList[1].y, gi.entityList[1].z) - glm::vec3(gi.playerEnt.x, gi.playerEnt.y, gi.playerEnt.z);
-            for (DWORD i{1}; i < gi.entityCount; i++) {
-                botent& ent = gi.entityList[i];
-                ImGui::Text("Name=%s | Health=%d | x=%.2f,y=%.2f,z=%.2f", ent.name, ent.health, ent.x, ent.y, ent.z);
+            ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
+            for (DWORD i{1}; i < _gd._entity_count; i++) {
+                bot_ent& ent = _gd._entity_list[i];
+                ImGui::Text("Name=%s | Health=%d | x=%.2f,y=%.2f,z=%.2f | ndc(x=%.2f, y=%.2f)", ent.name, ent.health, ent.x, ent.y, ent.z, _gd._ndc_entity_vec2[i].x, _gd._ndc_entity_vec2[i].y);
+                draw_list->AddLine({460, 587},_gd._ndc_entity_vec2[i], IM_COL32(255, 120, 0, 255), 1);
             }
 
-            
-            
+            DebugMatrix("view", _td.view);
+            DebugMatrix("proj", _td.proj);
+
             ImGui::End();
         }
 
