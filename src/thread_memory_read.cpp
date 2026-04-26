@@ -19,6 +19,6 @@ void memory_read() {
 			_gd._entity_list = local_gd._entity_list;
 			_gd._proj_mat = local_gd._proj_mat;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 }

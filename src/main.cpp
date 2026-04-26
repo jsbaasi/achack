@@ -9,35 +9,39 @@
 #include <thread>
 #include <Windows.h>
 #include <glm/vec3.hpp>
+#define IMVEC4(v) (v).x, (v).y, (v).z, (v).w
 
 // Data
-static ID3D11Device* g_pd3dDevice = nullptr;
-static ID3D11DeviceContext* g_pd3dDeviceContext = nullptr;
-static IDXGISwapChain* g_pSwapChain = nullptr;
-static bool                     g_SwapChainOccluded = false;
-static UINT                     g_ResizeWidth = 0, g_ResizeHeight = 0;
-static ID3D11RenderTargetView* g_mainRenderTargetView = nullptr;
+static ID3D11Device *g_pd3dDevice = nullptr;
+static ID3D11DeviceContext *g_pd3dDeviceContext = nullptr;
+static IDXGISwapChain *g_pSwapChain = nullptr;
+static bool g_SwapChainOccluded = false;
+static UINT g_ResizeWidth = 0, g_ResizeHeight = 0;
+static ID3D11RenderTargetView *g_mainRenderTargetView = nullptr;
 
 // Forward declarations of helper functions
 bool CreateDeviceD3D(HWND hWnd);
+
 void CleanupDeviceD3D();
+
 void CreateRenderTarget();
+
 void CleanupRenderTarget();
+
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-void DebugMatrix(const char* label, const glm::mat4& m) {
+void DebugMatrix(const char *label, const glm::mat4 &m) {
     ImGui::Text("%s:", label);
     // GLM is column-major; print as math rows (transposed display)
     for (int row = 0; row < 4; ++row) {
         ImGui::Text("[ %8.3f  %8.3f  %8.3f  %8.3f ]",
-            m[0][row], m[1][row], m[2][row], m[3][row]);
+                    m[0][row], m[1][row], m[2][row], m[3][row]);
     }
     ImGui::Spacing();
 }
 
 // Main code
-int main(int, char**)
-{
+int main(int, char **) {
     if (!FindWindowA("SDL_app", "AssaultCube")) {
         MessageBoxA(NULL, "Please run game first", "Error", MB_ICONERROR);
         return 0;
@@ -45,20 +49,25 @@ int main(int, char**)
 
     // Make process DPI aware and obtain main monitor scale
     ImGui_ImplWin32_EnableDpiAwareness();
-    float main_scale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY));
+    float main_scale = ImGui_ImplWin32_GetDpiScaleForMonitor(::MonitorFromPoint(POINT{0, 0}, MONITOR_DEFAULTTOPRIMARY));
 
     // Create application window
-    WNDCLASSEXW wc = { sizeof(wc), CS_VREDRAW | CS_HREDRAW, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"External", nullptr };
+    WNDCLASSEXW wc = {
+        sizeof(wc), CS_VREDRAW | CS_HREDRAW, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr,
+        nullptr, L"External", nullptr
+    };
     ::RegisterClassExW(&wc);
-    HWND hwnd = ::CreateWindowExW(WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_LAYERED | WS_EX_TRANSPARENT, wc.lpszClassName, L"Transparent_External", WS_POPUP, 100, 100, (int)(1280 * main_scale), (int)(800 * main_scale), nullptr, nullptr, wc.hInstance, nullptr);
+    HWND hwnd = ::CreateWindowExW(WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_LAYERED | WS_EX_TRANSPARENT,
+                                  wc.lpszClassName, L"Transparent_External", WS_POPUP, 100, 100,
+                                  (int) (1280 * main_scale), (int) (800 * main_scale), nullptr, nullptr, wc.hInstance,
+                                  nullptr);
 
     // Set transparent
     SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 0, LWA_ALPHA);
     SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), 0, LWA_COLORKEY);
 
     // Initialize Direct3D
-    if (!CreateDeviceD3D(hwnd))
-    {
+    if (!CreateDeviceD3D(hwnd)) {
         CleanupDeviceD3D();
         ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
         return 1;
@@ -71,18 +80,21 @@ int main(int, char**)
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    ImGuiIO &io = ImGui::GetIO();
+    (void) io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsLight();
 
     // Setup scaling
-    ImGuiStyle& style = ImGui::GetStyle();
-    style.ScaleAllSizes(main_scale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
-    style.FontScaleDpi = main_scale;        // Set initial font scale. (in docking branch: using io.ConfigDpiScaleFonts=true automatically overrides this for every window depending on the current monitor)
+    ImGuiStyle &style = ImGui::GetStyle();
+    style.ScaleAllSizes(main_scale);
+    // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+    style.FontScaleDpi = main_scale;
+    // Set initial font scale. (in docking branch: using io.ConfigDpiScaleFonts=true automatically overrides this for every window depending on the current monitor)
 
     // Setup Platform/Renderer backends
     ImGui_ImplWin32_Init(hwnd);
@@ -97,7 +109,7 @@ int main(int, char**)
     // setup game stuff
 
     if (int ec = init_dynamic_info("ac_client.exe", _da); ec) {
-        MessageBoxA(NULL, ec==1 ? "Failed to get pid" : "Failed to get base address" , "Error", MB_ICONERROR);
+        MessageBoxA(NULL, ec == 1 ? "Failed to get pid" : "Failed to get base address", "Error", MB_ICONERROR);
         return 1;
     }
     init_game_info();
@@ -108,8 +120,8 @@ int main(int, char**)
 
     // =================================
 
-    std::thread mem_read_thread{ memory_read };
-    std::thread esp_draw_thread{ esp_data };
+    std::thread mem_read_thread{memory_read};
+    std::thread esp_draw_thread{esp_data};
     mem_read_thread.detach();
     esp_draw_thread.detach();
 
@@ -117,17 +129,16 @@ int main(int, char**)
 
     // Main loop
     bool done = false;
-    while (!done)
-    {
+    while (!done) {
         WINDOWINFO info{};
         BOOL res = GetWindowInfo(game_hwnd, &info);
-        MoveWindow(hwnd, info.rcClient.left, info.rcClient.top, info.rcClient.right - info.rcClient.left, info.rcClient.bottom - info.rcClient.top, true);
+        MoveWindow(hwnd, info.rcClient.left, info.rcClient.top, info.rcClient.right - info.rcClient.left,
+                   info.rcClient.bottom - info.rcClient.top, true);
 
         // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
         MSG msg;
-        while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
-        {
+        while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE)) {
             ::TranslateMessage(&msg);
             ::DispatchMessage(&msg);
             if (msg.message == WM_QUIT)
@@ -137,16 +148,14 @@ int main(int, char**)
             break;
 
         // Handle window being minimized or screen locked
-        if (g_SwapChainOccluded && g_pSwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED)
-        {
+        if (g_SwapChainOccluded && g_pSwapChain->Present(0, DXGI_PRESENT_TEST) == DXGI_STATUS_OCCLUDED) {
             ::Sleep(10);
             continue;
         }
         g_SwapChainOccluded = false;
 
         // Handle window resize (we don't resize directly in the WM_SIZE handler)
-        if (g_ResizeWidth != 0 && g_ResizeHeight != 0)
-        {
+        if (g_ResizeWidth != 0 && g_ResizeHeight != 0) {
             CleanupRenderTarget();
             g_pSwapChain->ResizeBuffers(0, g_ResizeWidth, g_ResizeHeight, DXGI_FORMAT_UNKNOWN, 0);
             g_ResizeWidth = g_ResizeHeight = 0;
@@ -165,35 +174,48 @@ int main(int, char**)
             ImGui::ShowDemoWindow(&show_demo_window);
 
         // 2. Show another simple window.
-        if (show_another_window)
-        {
-            ImGui::Begin("Details", 0, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBackground);
+        if (show_another_window) {
+            ImGui::Begin("Details", 0,
+                         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar
+                         | ImGuiWindowFlags_NoBackground);
             ImGui::Text("%lu", _gd._entity_count);
-            ImGui::Text("Name=%s | Health=%d | x=%.2f,y=%.2f,z=%.2f", _gd._player_ent.name, _gd._player_ent.health, _gd._player_ent.player_x, _gd._player_ent.player_y, _gd._player_ent.player_z);
-            ImGui::Text("vector x=%.2f y=%.2f z=%.2f", _gd._entity_list[1].x- _gd._player_ent.player_x, _gd._entity_list[1].y - _gd._player_ent.player_y, _gd._entity_list[1].z - _gd._player_ent.player_z);
-            //auto linetofirst = glm::vec3(gi.entityList[1].x, gi.entityList[1].y, gi.entityList[1].z) - glm::vec3(gi.playerEnt.x, gi.playerEnt.y, gi.playerEnt.z);
+            ImGui::Text("Name=%s | Health=%d | x=%.2f,y=%.2f,z=%.2f", _gd._player_ent.name, _gd._player_ent.health,
+                        _gd._player_ent.player_x, _gd._player_ent.player_y, _gd._player_ent.player_z);
+            // ImGui::Text("vector x=%.2f y=%.2f z=%.2f", _gd._entity_list[1].x- _gd._player_ent.player_x, _gd._entity_list[1].y - _gd._player_ent.player_y, _gd._entity_list[1].z - _gd._player_ent.player_z);
+
             ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
             for (DWORD i{1}; i < _gd._entity_count; i++) {
                 bot_ent& ent = _gd._entity_list[i];
-                ImGui::Text("Name=%s | Health=%d | x=%.2f,y=%.2f,z=%.2f | ndc(x=%.2f, y=%.2f)", ent.name, ent.health, ent.x, ent.y, ent.z, _gd._ndc_entity_vec2[i].x, _gd._ndc_entity_vec2[i].y);
-                draw_list->AddLine({460, 587},_gd._ndc_entity_vec2[i], IM_COL32(255, 120, 0, 255), 1);
+                ImGui::Text("Name=%s | Health=%d | x=%.2f,y=%.2f,z=%.2f | ndc(x=%.2f, y=%.2f)", ent.name, ent.health, ent.x, ent.y, ent.z, _gd._screen_entity_vec2[i].x, _gd._screen_entity_vec2[i].y);
+                draw_list->AddLine({460, 587},_gd._screen_entity_vec2[i], IM_COL32(255, 120, 0, 255), 1);
             }
 
-            DebugMatrix("view", _td.view);
-            DebugMatrix("proj", _td.proj);
+            // DebugMatrix("view", _td.view);
+            // DebugMatrix("proj", _td.proj);
+            // ImGui::Text("viewport size x=%.2f, y=%.2f", _gd._window_size.x, _gd._window_size.y);
+            ImGui::Text("test world pos: (x=%.2f, y=%.2f, z=%.2f, w=%.2f)",IMVEC4(_td.world_pos));
+            ImGui::Text("test view pos: (x=%.2f, y=%.2f, z=%.2f, w=%.2f)",IMVEC4(_td.view_pos));
+            ImGui::Text("test clip pos: (x=%.2f, y=%.2f, z=%.2f, w=%.2f)",IMVEC4(_td.clip_pos));
+            ImGui::Text("test ndc pos: (x=%.2f, y=%.2f, z=%.2f, w=%.2f)",IMVEC4(_td.ndc_pos));
+            ImGui::Text("test screen pos: (x=%.2f, y=%.2f, z=%.2f, w=%.2f)",IMVEC4(_td.screen_pos));
+            // ImDrawList *draw_list = ImGui::GetBackgroundDrawList();
+            // draw_list->AddLine({460, 587}, {_td.screen_pos.x, _td.screen_pos.y}, IM_COL32(255, 120, 0, 255), 1);
+
 
             ImGui::End();
         }
 
         // Rendering
         ImGui::Render();
-        const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
+        const float clear_color_with_alpha[4] = {
+            clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w
+        };
         g_pd3dDeviceContext->OMSetRenderTargets(1, &g_mainRenderTargetView, nullptr);
         g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color_with_alpha);
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
         // Present
-        HRESULT hr = g_pSwapChain->Present(1, 0);   // Present with vsync
+        HRESULT hr = g_pSwapChain->Present(1, 0); // Present with vsync
         //HRESULT hr = g_pSwapChain->Present(0, 0); // Present without vsync
         g_SwapChainOccluded = (hr == DXGI_STATUS_OCCLUDED);
     }
@@ -212,8 +234,7 @@ int main(int, char**)
 
 // Helper functions
 
-bool CreateDeviceD3D(HWND hWnd)
-{
+bool CreateDeviceD3D(HWND hWnd) {
     // Setup swap chain
     // This is a basic setup. Optimally could use e.g. DXGI_SWAP_EFFECT_FLIP_DISCARD and handle fullscreen mode differently. See #8979 for suggestions.
     DXGI_SWAP_CHAIN_DESC sd;
@@ -235,10 +256,14 @@ bool CreateDeviceD3D(HWND hWnd)
     UINT createDeviceFlags = 0;
     //createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
     D3D_FEATURE_LEVEL featureLevel;
-    const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
-    HRESULT res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
+    const D3D_FEATURE_LEVEL featureLevelArray[2] = {D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0,};
+    HRESULT res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags,
+                                                featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain,
+                                                &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
     if (res == DXGI_ERROR_UNSUPPORTED) // Try high-performance WARP software driver if hardware is not available.
-        res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pd3dDeviceContext);
+        res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createDeviceFlags,
+                                            featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice,
+                                            &featureLevel, &g_pd3dDeviceContext);
     if (res != S_OK)
         return false;
 
@@ -246,25 +271,34 @@ bool CreateDeviceD3D(HWND hWnd)
     return true;
 }
 
-void CleanupDeviceD3D()
-{
+void CleanupDeviceD3D() {
     CleanupRenderTarget();
-    if (g_pSwapChain) { g_pSwapChain->Release(); g_pSwapChain = nullptr; }
-    if (g_pd3dDeviceContext) { g_pd3dDeviceContext->Release(); g_pd3dDeviceContext = nullptr; }
-    if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = nullptr; }
+    if (g_pSwapChain) {
+        g_pSwapChain->Release();
+        g_pSwapChain = nullptr;
+    }
+    if (g_pd3dDeviceContext) {
+        g_pd3dDeviceContext->Release();
+        g_pd3dDeviceContext = nullptr;
+    }
+    if (g_pd3dDevice) {
+        g_pd3dDevice->Release();
+        g_pd3dDevice = nullptr;
+    }
 }
 
-void CreateRenderTarget()
-{
-    ID3D11Texture2D* pBackBuffer;
+void CreateRenderTarget() {
+    ID3D11Texture2D *pBackBuffer;
     g_pSwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
     g_pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &g_mainRenderTargetView);
     pBackBuffer->Release();
 }
 
-void CleanupRenderTarget()
-{
-    if (g_mainRenderTargetView) { g_mainRenderTargetView->Release(); g_mainRenderTargetView = nullptr; }
+void CleanupRenderTarget() {
+    if (g_mainRenderTargetView) {
+        g_mainRenderTargetView->Release();
+        g_mainRenderTargetView = nullptr;
+    }
 }
 
 // Forward declare message handler from imgui_impl_win32.cpp
@@ -275,26 +309,24 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
 // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
+LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
         return true;
 
-    switch (msg)
-    {
-    case WM_SIZE:
-        if (wParam == SIZE_MINIMIZED)
+    switch (msg) {
+        case WM_SIZE:
+            if (wParam == SIZE_MINIMIZED)
+                return 0;
+            g_ResizeWidth = (UINT) LOWORD(lParam); // Queue resize
+            g_ResizeHeight = (UINT) HIWORD(lParam);
             return 0;
-        g_ResizeWidth = (UINT)LOWORD(lParam); // Queue resize
-        g_ResizeHeight = (UINT)HIWORD(lParam);
-        return 0;
-    case WM_SYSCOMMAND:
-        if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
+        case WM_SYSCOMMAND:
+            if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
+                return 0;
+            break;
+        case WM_DESTROY:
+            ::PostQuitMessage(0);
             return 0;
-        break;
-    case WM_DESTROY:
-        ::PostQuitMessage(0);
-        return 0;
     }
     return ::DefWindowProcW(hWnd, msg, wParam, lParam);
 }

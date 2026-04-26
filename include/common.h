@@ -12,8 +12,8 @@ struct bot_ent
 {
     char pad_0000[4]; //0x0000
     float x; //0x0004
-    float z; //0x0008
     float y; //0x000C
+    float z; //0x0008
     char pad_0010[220]; //0x0010
     int32_t health; //0x00EC
     char pad_00F0[277]; //0x00F0
@@ -24,17 +24,17 @@ struct player_ent
 {
 	char pad_0000[4]; //0x0000
 	float camerax; //0x0004
-	float cameraz; //0x0008
 	float cameray; //0x000C
+	float cameraz; //0x0008
 	float xspeed; //0x0010
-	float zspeed; //0x0014
 	float yspeed; //0x0018
+	float zspeed; //0x0014
 	float x_velo; //0x001C
-	float z_velo; //0x0020
 	float y_velo; //0x0024
+	float z_velo; //0x0020
 	float player_x; //0x0028
-	float player_z; //0x002C
 	float player_y; //0x0030
+	float player_z; //0x002C
 	float yaw; //0x0034
 	float pitch; //0x0038
 	float roll; //0x003C
@@ -109,8 +109,8 @@ struct camera
 
 	char pad_0034[12]; //0x0034
 	float camera_x; //0x0040
-	float camera_z; //0x0044
 	float camera_y; //0x0048
+	float camera_z; //0x0044
 }; //Size: 0x004C
 
 struct dynamic_addresses {
@@ -126,7 +126,7 @@ struct dynamic_addresses {
 struct game_data {
 	DWORD _entity_count{};
 	std::array<bot_ent, 32> _entity_list{};
-	std::array<ImVec2, 32> _ndc_entity_vec2{};
+	std::array<ImVec2, 32> _screen_entity_vec2{};
 	player_ent _player_ent{};
 	projection_matrix _proj_mat{};
 	ImVec2 _window_size{};
@@ -137,6 +137,7 @@ struct test_data {
 	glm::vec4 view_pos{};
 	glm::vec4 clip_pos{};
 	glm::vec4 ndc_pos{};
+	glm::vec4 screen_pos{};
 	glm::mat4 view{};
 	glm::mat4 proj{};
 };
