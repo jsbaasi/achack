@@ -184,20 +184,26 @@ int main(int, char **) {
             // ImGui::Text("vector x=%.2f y=%.2f z=%.2f", _gd._entity_list[1].x- _gd._player_ent.player_x, _gd._entity_list[1].y - _gd._player_ent.player_y, _gd._entity_list[1].z - _gd._player_ent.player_z);
 
             ImDrawList* draw_list = ImGui::GetBackgroundDrawList();
-            for (DWORD i{1}; i < _gd._entity_count; i++) {
-                bot_ent& ent = _gd._entity_list[i];
-                ImGui::Text("Name=%s | Health=%d | x=%.2f,y=%.2f,z=%.2f | ndc(x=%.2f, y=%.2f)", ent.name, ent.health, ent.x, ent.y, ent.z, _gd._screen_entity_vec2[i].x, _gd._screen_entity_vec2[i].y);
-                draw_list->AddLine({460, 587},_gd._screen_entity_vec2[i], IM_COL32(255, 120, 0, 255), 1);
+            // for (DWORD i{1}; i < _gd._entity_count; i++) {
+                // bot_ent& ent = _gd._entity_list[i];
+                // ImGui::Text("Name=%s | Health=%d | x=%.2f,y=%.2f,z=%.2f", ent.name, ent.health, ent.x, ent.y, ent.z);
+                // draw_list->AddLine({460, 587},_gd._screen_entity_vec2[i], IM_COL32(255, 120, 0, 255), 1);
+            // }
+            {
+                std::scoped_lock lock(_ed._cuboid_mex);
+                for (cuboid& coid : _ed._entity_cuboids) {
+                    coid.draw(draw_list, IM_COL32(0, 255, 249, 255), IM_COL32(255, 0, 0, 255), 1);
+                }
             }
 
             // DebugMatrix("view", _td.view);
             // DebugMatrix("proj", _td.proj);
             // ImGui::Text("viewport size x=%.2f, y=%.2f", _gd._window_size.x, _gd._window_size.y);
-            ImGui::Text("test world pos: (x=%.2f, y=%.2f, z=%.2f, w=%.2f)",IMVEC4(_td.world_pos));
-            ImGui::Text("test view pos: (x=%.2f, y=%.2f, z=%.2f, w=%.2f)",IMVEC4(_td.view_pos));
-            ImGui::Text("test clip pos: (x=%.2f, y=%.2f, z=%.2f, w=%.2f)",IMVEC4(_td.clip_pos));
-            ImGui::Text("test ndc pos: (x=%.2f, y=%.2f, z=%.2f, w=%.2f)",IMVEC4(_td.ndc_pos));
-            ImGui::Text("test screen pos: (x=%.2f, y=%.2f, z=%.2f, w=%.2f)",IMVEC4(_td.screen_pos));
+            // ImGui::Text("test world pos: (x=%.2f, y=%.2f, z=%.2f, w=%.2f)",IMVEC4(_td.world_pos));
+            // ImGui::Text("test view pos: (x=%.2f, y=%.2f, z=%.2f, w=%.2f)",IMVEC4(_td.view_pos));
+            // ImGui::Text("test clip pos: (x=%.2f, y=%.2f, z=%.2f, w=%.2f)",IMVEC4(_td.clip_pos));
+            // ImGui::Text("test ndc pos: (x=%.2f, y=%.2f, z=%.2f, w=%.2f)",IMVEC4(_td.ndc_pos));
+            // ImGui::Text("test screen pos: (x=%.2f, y=%.2f, z=%.2f, w=%.2f)",IMVEC4(_td.screen_pos));
             // ImDrawList *draw_list = ImGui::GetBackgroundDrawList();
             // draw_list->AddLine({460, 587}, {_td.screen_pos.x, _td.screen_pos.y}, IM_COL32(255, 120, 0, 255), 1);
 

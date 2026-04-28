@@ -4,6 +4,66 @@
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "constants.h"
+#include "logger.h"
+
+void cuboid::init(ent& entity) {
+    float& x{entity.camera_x}, y{entity.camera_y}, z{entity.camera_z};
+
+    glm::mat4 rot(1.0f);
+    rot = glm::translate(rot,{entity.camera_x, entity.camera_y, entity.camera_z});
+    rot = glm::rotate(rot, glm::radians(entity.yaw), glm::vec3(0.0f,0.0f,1.0f));
+    rot = glm::translate(rot, {-entity.camera_x, -entity.camera_y, -entity.camera_z});
+
+    float left   = x + constants::gap_between_right;
+    float right  = x - constants::gap_between_right;
+    float front  = y - constants::gap_between_front;
+    float back   = y + constants::gap_between_front;
+    float top    = z + constants::gap_between_top;
+    float bottom = z - constants::gap_between_bottom;
+
+    points_3d[TOP_BACK_LEFT]   = {left,  back,  top,    1};
+    points_3d[TOP_BACK_RIGHT]  = {right, back,  top,    1};
+    points_3d[TOP_FRONT_LEFT]  = {left,  front, top,    1};
+    points_3d[TOP_FRONT_RIGHT] = {right, front, top,    1};
+    points_3d[BOT_BACK_LEFT]   = {left,  back,  bottom, 1};
+    points_3d[BOT_BACK_RIGHT]  = {right, back,  bottom, 1};
+    points_3d[BOT_FRONT_LEFT]  = {left,  front, bottom, 1};
+    points_3d[BOT_FRONT_RIGHT] = {right, front, bottom, 1};
+
+    for (auto& point : points_3d) {
+        point = rot * point;
+    }
+
+}
+
+void cuboid::draw(ImDrawList* dl, const ImU32 colour_prmry, const ImU32 colour_scnd, const float thickness) const {
+    auto line = [&](const Corner a, const Corner b, const ImU32 col) {
+        if (points_2d[a] && points_2d[b]) {
+            dl->AddLine(points_2d[a].value(), points_2d[b].value(), col, thickness);
+        }
+    };
+    line(TOP_BACK_LEFT,   TOP_BACK_RIGHT, colour_prmry);
+    line(TOP_BACK_LEFT,   TOP_FRONT_LEFT, colour_prmry);
+    line(TOP_BACK_LEFT,   BOT_BACK_LEFT, colour_prmry);
+
+    line(TOP_FRONT_RIGHT, TOP_BACK_RIGHT, colour_prmry);
+    line(TOP_FRONT_RIGHT, TOP_FRONT_LEFT, colour_scnd);
+    line(TOP_FRONT_RIGHT, BOT_FRONT_RIGHT, colour_scnd);
+
+    line(BOT_FRONT_LEFT,  BOT_FRONT_RIGHT, colour_scnd);
+    line(BOT_FRONT_LEFT,  TOP_FRONT_LEFT, colour_scnd);
+    line(BOT_FRONT_LEFT,  BOT_BACK_LEFT, colour_prmry);
+
+    line(BOT_BACK_RIGHT,  BOT_BACK_LEFT, colour_prmry);
+    line(BOT_BACK_RIGHT,  BOT_FRONT_RIGHT, colour_prmry);
+    line(BOT_BACK_RIGHT, TOP_BACK_RIGHT, colour_prmry);
+}
+
+void cuboid::world_to_screen(const glm::mat4& view, const glm::mat4& proj, const ImVec2& window_size, const ImVec2 &default_position) {
+    for (int i{}; i<points_3d.size(); ++i) {
+        points_2d[i] = mvp_transform_to_vec2(points_3d[i], view, proj, window_size, default_position);
+    }
+}
 
 void pack_view_matrix(glm::mat4 &view, game_data &_gd) {
     const glm::vec3 camera_position{_gd._player_ent.camerax, _gd._player_ent.cameray, _gd._player_ent.cameraz};
@@ -95,7 +155,21 @@ void pack_viewport_matrix(const ImVec2 window_size, const float z_far, const flo
     // }
 }
 
-glm::vec4 mvp_transform(const glm::vec4 world_pos, const glm::mat4 &view, const glm::mat4 &proj,
+std::optional<ImVec2> mvp_transform_to_vec2(const glm::vec4 world_pos, const glm::mat4& view, const glm::mat4& proj, const ImVec2& window_size, const ImVec2 &default_position) {
+    glm::vec4 res{};
+    res = proj * view * world_pos;
+    if (is_clipped(res)) {
+        return std::nullopt;
+    } else {
+        res = dehomogenize(res);
+        return ImVec2{
+            (res.x * 0.5f + 0.5f) * window_size.x,
+            (1.0f - (res.y * 0.5f + 0.5f)) * window_size.y
+        };
+    }
+}
+
+glm::vec4 mvp_transform_to_vec4(const glm::vec4 world_pos, const glm::mat4 &view, const glm::mat4 &proj,
                         const ImVec2 &window_size, const ImVec2 &origin) {
     glm::vec4 res{};
     // _td.view_pos = view * world_pos;
@@ -128,7 +202,7 @@ void esp_data() {
     projection_matrix &pm{local_gd._proj_mat};
     glm::mat4 view{}, proj{}, vp{}, viewport{};
     glm::vec4 world_space_pos{}, clip_space_pos{}, ndc_pos{};
-
+    _global_d.future.wait();
     while (true) {
         {
             std::scoped_lock lock(_gd_mutex);
@@ -156,20 +230,23 @@ void esp_data() {
         //     _td.ndc_pos = dehomogenize(_td.clip_pos);
         //     _td.screen_pos = {(_td.ndc_pos.x * 0.5f + 0.5f) * local_gd._window_size.x, (1.0f - (_td.ndc_pos.y * 0.5f + 0.5f)) * local_gd._window_size.y, 0, 0};
         // }
-        _td.screen_pos = mvp_transform(_td.world_pos, view, proj, local_gd._window_size, origin);
+        // _td.screen_pos = mvp_transform_to_vec4(_td.world_pos, view, proj, local_gd._window_size, origin);
+        //
+        // _td.view = view;
+        // _td.proj = proj;
 
-        _td.view = view;
-        _td.proj = proj;
 
+        for (int i{0}; i < local_gd._entity_count-1; ++i) {
 
-        for (int i{}; i < local_gd._entity_count; ++i) {
-            auto res = mvp_transform({
-                                         local_gd._entity_list[i].x,
-                                         local_gd._entity_list[i].y,
-                                         local_gd._entity_list[i].z,
-                                         1
-                                     }, view, proj, local_gd._window_size, origin);
-            local_gd._screen_entity_vec2[i] = {res.x, res.y};
+            _ed._entity_cuboids[i].world_to_screen(view, proj, local_gd._window_size, origin);
+            // auto res = mvp_transform_to_vec4({
+            //                              local_gd._entity_list[i].x,
+            //                              local_gd._entity_list[i].y,
+            //                              local_gd._entity_list[i].z,
+            //                              1
+            //                          }, view, proj, local_gd._window_size, origin);
+            // local_gd._screen_entity_vec2[i] = {res.x, res.y};
+
         }
 
         {
