@@ -1,10 +1,15 @@
+#include <algorithm>
+
 #include "common.h"
+#include <cmath>
 #include <thread>
 #include <chrono>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "constants.h"
-#include "logger.h"
+#include "pointer.h"
+
+using MagYawPitch = std::pair<float, yaw_pitch>;
 
 void cuboid::init(ent& entity) {
     float& x{entity.camera_x}, y{entity.camera_y}, z{entity.camera_z};
@@ -34,9 +39,11 @@ void cuboid::init(ent& entity) {
         point = rot * point;
     }
 
+    is_dead = entity.is_dead;
 }
 
 void cuboid::draw(ImDrawList* dl, const ImU32 colour_prmry, const ImU32 colour_scnd, const float thickness) const {
+    if (is_dead) return;
     auto line = [&](const Corner a, const Corner b, const ImU32 col) {
         if (points_2d[a] && points_2d[b]) {
             dl->AddLine(points_2d[a].value(), points_2d[b].value(), col, thickness);
@@ -146,13 +153,6 @@ void pack_viewport_matrix(const ImVec2 window_size, const float z_far, const flo
     viewport_mat[3].y = window_size.y / 2;
     viewport_mat[3].z = (z_far + z_near) / 2;
     viewport_mat[3].w = 1;
-
-    // static Mat4 viewport = {
-    //     W/2,0,0,X+W/2,
-    //     0,H/2,0,Y+H/2,
-    //     0,0,(F-N)/2,(F+N)/2,
-    //     0,0,0,1,
-    // }
 }
 
 std::optional<ImVec2> mvp_transform_to_vec2(const glm::vec4 world_pos, const glm::mat4& view, const glm::mat4& proj, const ImVec2& window_size, const ImVec2 &default_position) {
@@ -172,22 +172,11 @@ std::optional<ImVec2> mvp_transform_to_vec2(const glm::vec4 world_pos, const glm
 glm::vec4 mvp_transform_to_vec4(const glm::vec4 world_pos, const glm::mat4 &view, const glm::mat4 &proj,
                         const ImVec2 &window_size, const ImVec2 &origin) {
     glm::vec4 res{};
-    // _td.view_pos = view * world_pos;
-    // _td.clip_pos = proj * _td.view_pos;
     res = proj * view * world_pos;
     if (is_clipped(res)) {
-        // _td.ndc_pos = {-11111, -11111, -11111, 0};
-        // _td.screen_pos = {-11111, -11111, 0, 0};
         return {origin.x, window_size.y, 0, 0};
     } else {
         res = dehomogenize(res);
-        // _td.ndc_pos = res;
-        // _td.screen_pos = {
-        //     (res.x * 0.5f + 0.5f) * window_size.x,
-        //     (1.0f - (res.y * 0.5f + 0.5f)) * window_size.y,
-        //     0,
-        //     0
-        // };
         return {
             (res.x * 0.5f + 0.5f) * window_size.x,
             (1.0f - (res.y * 0.5f + 0.5f)) * window_size.y,
@@ -195,6 +184,12 @@ glm::vec4 mvp_transform_to_vec4(const glm::vec4 world_pos, const glm::mat4 &view
             0
         };
     }
+}
+
+float get_yaw(float x, float y) {
+    // opposite goes first then adjacent
+    auto at = std::atan2(x, -y);
+    return at>=0 ? at : (2*std::numbers::pi) - (at*-1);
 }
 
 void esp_data() {
@@ -214,45 +209,38 @@ void esp_data() {
         pack_viewport_matrix(_gd._window_size, constants::z_far, constants::z_near, viewport);
         vp = proj * view;
 
-        // _td.world_pos = {local_gd._player_ent.camerax+5, local_gd._player_ent.cameray, local_gd._player_ent.cameraz, 1.0f};
-        // _td.world_pos = {
-        //     local_gd._entity_list[1].x,
-        //     local_gd._entity_list[1].y,
-        //     local_gd._entity_list[1].z, 1.0f
-        // };
-        // _td.view_pos = view * _td.world_pos;
-        // _td.clip_pos = proj * _td.view_pos;
-        // if (is_clipped(_td.clip_pos)) {
-        //     _td.ndc_pos.x = -1111111;
-        //     _td.ndc_pos.y = -1111111;
-        //     _td.screen_pos = {origin.x, origin.y, 0, 0};
-        // } else {
-        //     _td.ndc_pos = dehomogenize(_td.clip_pos);
-        //     _td.screen_pos = {(_td.ndc_pos.x * 0.5f + 0.5f) * local_gd._window_size.x, (1.0f - (_td.ndc_pos.y * 0.5f + 0.5f)) * local_gd._window_size.y, 0, 0};
-        // }
-        // _td.screen_pos = mvp_transform_to_vec4(_td.world_pos, view, proj, local_gd._window_size, origin);
-        //
-        // _td.view = view;
-        // _td.proj = proj;
-
-
         for (int i{0}; i < local_gd._entity_count-1; ++i) {
-
             _ed._entity_cuboids[i].world_to_screen(view, proj, local_gd._window_size, origin);
-            // auto res = mvp_transform_to_vec4({
-            //                              local_gd._entity_list[i].x,
-            //                              local_gd._entity_list[i].y,
-            //                              local_gd._entity_list[i].z,
-            //                              1
-            //                          }, view, proj, local_gd._window_size, origin);
-            // local_gd._screen_entity_vec2[i] = {res.x, res.y};
-
         }
 
         {
             std::scoped_lock lock(_gd_mutex);
             _gd._screen_entity_vec2 = local_gd._screen_entity_vec2;
         }
+        if (!_gd._toggles._aimbot) continue;
+        std::vector<MagYawPitch> magnitude_euler_pairs{};
+        for (int i{1}; i < local_gd._entity_count; ++i) {
+            /*
+             * loop through all of the entities, multiply each of their positions by view matrix, get their magnitude. map magnitude to (yaw, pitch) to aim there
+             * sort magnitudes, look up for yaw, pitch and set my yaw and pitch to that.
+             */
+            auto& curr_ent = local_gd._entity_list[i];
+            if (curr_ent.is_dead) continue;
+            glm::vec4 my_world_pos = {local_gd._player_ent.camerax, local_gd._player_ent.cameray, local_gd._player_ent.cameraz, 1};
+            glm::vec4 target = {curr_ent.camera_x, curr_ent.camera_y, curr_ent.camera_z, 1};
+            glm::vec4 look_at = target - my_world_pos;
+            auto distance_away = glm::length(look_at);
+            look_at = glm::normalize(look_at);
+            auto magnitude = glm::length(look_at);
+            float yaw = glm::degrees(get_yaw(look_at.x, look_at.y));
+            float pitch = glm::degrees(asin(look_at.z));
+            magnitude_euler_pairs.push_back({distance_away, {yaw, pitch}});
+        }
+        std::sort(magnitude_euler_pairs.begin(), magnitude_euler_pairs.end(), [](MagYawPitch a, MagYawPitch b) {
+            return a.first < b.first;
+        });
+        auto& closest = magnitude_euler_pairs[0];
+        WPM(pointer(_da._player_addr).add(0x34), closest.second);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }

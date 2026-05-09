@@ -9,53 +9,55 @@
 #include <optional>
 #include <Windows.h>
 #include "imgui.h"
+#include "overlay.h"
 
 
 bool is_clipped(glm::vec4 &pos);
-
 glm::vec4 dehomogenize(const glm::vec4 &pos);
-
 std::optional<ImVec2> mvp_transform_to_vec2(const glm::vec4 world_pos, const glm::mat4 &view, const glm::mat4 &proj,
                                             const ImVec2 &window_size, const ImVec2 &default_position);
 struct ent
 {
-    char pad_0000[4]; //0x0000
-    float camera_x; //0x0004
-    float camera_y; //0x0008
-    float camera_z; //0x000C
-    float x_speed; //0x0010
-    float y_speed; //0x0014
-    float z_speed; //0x0018
-    float x_velo; //0x001C
-    float y_velo; //0x0020
-    float z_velo; //0x0024
-    float ent_x; //0x0028
-    float ent_y; //0x002C
-    float ent_z; //0x0030
-    float yaw; //0x0034
-    float pitch; //0x0038
-    float roll; //0x003C
-    float recoil_punch; //0x0040
-    char pad_0044[4]; //0x0044
-    float jump_speed; //0x0048
-    char pad_004C[16]; //0x004C
-    uint32_t ladder_midair_bitmask; //0x005C
-    char pad_0060[4]; //0x0060
-    uint32_t ent_state_bitmask; //0x0064
-    char pad_0068[12]; //0x0068
-    uint32_t input_bitmask; //0x0074
-    char pad_0078[8]; //0x0078
-    uint32_t movement_bitmask; //0x0080
-    char pad_0084[104]; //0x0084
-    int32_t health; //0x00EC
-    int32_t armour; //0x00F0
-    char pad_00F4[68]; //0x00F4
-    int32_t reserve; //0x0138
-    int32_t magazine; //0x013C
-    char pad_0140[4]; //0x0140
-    int32_t grenade; //0x0144
-    char pad_0148[189]; //0x0148
-    char name[32]; //0x0205
+	char pad_0000[4]; //0x0000
+	float camera_x; //0x0004
+	float camera_y; //0x0008
+	float camera_z; //0x000C
+	float x_speed; //0x0010
+	float y_speed; //0x0014
+	float z_speed; //0x0018
+	float x_velo; //0x001C
+	float y_velo; //0x0020
+	float z_velo; //0x0024
+	float ent_x; //0x0028
+	float ent_y; //0x002C
+	float ent_z; //0x0030
+	float yaw; //0x0034
+	float pitch; //0x0038
+	float roll; //0x003C
+	float recoil_punch; //0x0040
+	char pad_0044[4]; //0x0044
+	float jump_speed; //0x0048
+	char pad_004C[16]; //0x004C
+	uint32_t ladder_midair_bitmask; //0x005C
+	char pad_0060[4]; //0x0060
+	uint32_t ent_state_bitmask; //0x0064
+	char pad_0068[12]; //0x0068
+	uint16_t input_bitmask; //0x0074
+	bool is_dead; //0x0076
+	char pad_0077[9]; //0x0077
+	uint32_t movement_bitmask; //0x0080
+	char pad_0084[104]; //0x0084
+	int32_t health; //0x00EC
+	int32_t armour; //0x00F0
+	char pad_00F4[8]; //0x00F4
+	int32_t gets_set_to_1_on_respawn; //0x00FC
+	char pad_0100[56]; //0x0100
+	int32_t reserve; //0x0138
+	int32_t magazine; //0x013C
+	char pad_0140[4]; //0x0140
+	int32_t grenade; //0x0144
+	char pad_0148[189]; //0x0148
+	char name[32]; //0x0205
 }; //Size: 0x0225
 
 template<typename T>
@@ -73,7 +75,7 @@ public:
 
     std::array<glm::vec4, 8> points_3d{};
     std::vector<std::optional<ImVec2> > points_2d{8};
-    bool alive{};
+    bool is_dead{};
 
     enum Corner {
         TOP_BACK_LEFT, TOP_BACK_RIGHT,
@@ -185,6 +187,17 @@ struct game_data {
     player_ent _player_ent{};
     projection_matrix _proj_mat{};
     ImVec2 _window_size{};
+	struct toggles {
+		bool _aimbot{};
+		bool _esp{};
+		bool _mod_menu{};
+	} _toggles{};
+	overlay::menu _menu{};
+};
+
+struct yaw_pitch {
+    float yaw{};
+    float pitch{};
 };
 
 struct global_data {
@@ -217,5 +230,7 @@ inline global_data _global_d;
 void memory_read();
 
 void esp_data();
+bool init_dynamic_info(const char* pName, dynamic_addresses& di);
+void init_game_info();
 
 #endif

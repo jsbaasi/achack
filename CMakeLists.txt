@@ -6,6 +6,8 @@ if (POLICY CMP0141)
     set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif ()
 
+
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(IMGUI_SRCS
         "external/imgui/imgui.cpp"
@@ -27,7 +29,9 @@ project(achack)
 # entry point
 add_executable(${PROJECT_NAME}
         "src/main.cpp"
-        "src/gamememory.cpp"
+        "src/overlay.cpp"
+        "src/renderer.cpp"
+        "src/common.cpp"
         "src/thread_memory_read.cpp"
         "src/thread_esp_data.cpp"
         "src/pointer.cpp"
@@ -61,6 +65,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         dwmapi
 )
 
+file(COPY assets DESTINATION ${CMAKE_BINARY_DIR})
 set_target_properties(${PROJECT_NAME} PROPERTIES
         CXX_STANDARD 23
         CXX_STANDARD_REQUIRED ON
